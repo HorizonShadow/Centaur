@@ -3,7 +3,7 @@ const Subscription = require('./Publishers/Subscription');
 const Sender = require('./MessageHandlers/Sender');
 const UserRegistrar = require('./Users/UserRegistrar');
 const PairRequestHandler = require('./Users/PairRequestHandler');
-
+const User = require('../Models/User');
 class Dispatcher {
   constructor() {
     this.dispatchedClientPublishers = {
@@ -71,6 +71,9 @@ class Dispatcher {
         this.dispatchedClientPublishers.subscriptions[message.id] = (new Sender(ws, message, this.dispatchedClientPublishers.subscriptions)).run();
         break;
       case 'register':
+        User.create({
+          id: message.id
+        });
         this.onlineUsers[message.id] = (new UserRegistrar(ws, message, this.dispatchedClientPublishers.subscriptions)).register();
         // Remove user if they close their connection
         this.addDeRegisterOnClose(ws, message.username);

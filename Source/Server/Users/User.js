@@ -4,6 +4,7 @@ class User {
   constructor(username, details, subscriptions, initMessage) {
     this.username = username;
     this.details = details;
+    console.log(details);
     this.subscriptions = subscriptions;
     this.initMessage = initMessage;
   }

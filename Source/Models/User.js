@@ -5,7 +5,10 @@ const User = sequelize.define('user', {
 	id: {
 		type: Sequelize.UUID,
 		primaryKey: true
-	}
+	},
+	username: {
+		type: Sequelize.STRING
+	},
 });
 
 User.sync();
