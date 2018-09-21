@@ -1,3 +1,7 @@
+require('reflect-metadata');
+require('dotenv').config();
+require('./Sequelize');
+require('../Models/User');
 const path = require('path');
 const express = require('express');
 const app = express();
@@ -13,7 +17,6 @@ app.use('/', (req, res, next) => {
 app.use('/', express.static(path.resolve('dist')));
 
 app.ws('/ws', function(ws, req) {
-
   ws.on('message', function(msg) {
     try {
       const parsedMessage = JSON.parse(msg);
