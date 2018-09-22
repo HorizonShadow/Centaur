@@ -27,6 +27,10 @@ app.ws('/ws', function(ws, req) {
       console.error(e);
     }
   });
+
+  ws.on('close', function() {
+    dispatch.removeConnection(ws);
+  });
 });
 
 app.listen(3000);

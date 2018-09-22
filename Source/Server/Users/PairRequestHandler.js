@@ -1,4 +1,5 @@
 const SubscriptionEnum = new (require('../Publishers/SubscriptionsEnum'))();
+const User = require('../../Models/User');
 
 class PairRequestHandler {
   constructor(websocket, message, users) {
@@ -26,7 +27,10 @@ class PairRequestHandler {
       if(subscription.conf.subscriptions.includes(SubscriptionEnum.conversation_start)) {
         subscription.subscriptionProviders.forEach(provider => {
           if(provider.getSubscriptionId() === SubscriptionEnum.conversation_start && provider.running) {
-            provider.onNewConversation(this.message.myJoinCode, this.message.code, this.users[this.message.myJoinCode]);
+            User.findById(this.message.myJoinCode).then(user => {
+              provider.onNewConversation(this.message.myJoinCode, this.message.code, user);
+            })
+            
           }
         });
       }
@@ -35,22 +39,23 @@ class PairRequestHandler {
 
   run(subscriptions) {
     this.subscriptions = subscriptions;
-
-    if(!this.check()) {
-      this.sendResponse({
-        type: 'pair-response',
-        status: 'No user(s) exist with that join code. Invalid join code.',
-        success: false
-      });
-    }
-
-    this.sendResponse({
-      type: 'pair-response',
-      status: 'Successfully paired!',
-      success: true,
-      user: this.users[this.message.code].getSerializeableObject()
+    User.findById(this.message.code).then(user => {
+      if(user) {
+        this.sendResponse({
+          type: 'pair-response',
+          status: 'Successfully paired!',
+          success: true,
+          user: user.getSerializeableObject()
+        });
+        this.startConversationForPair();
+      } else {
+        this.sendResponse({
+          type: 'pair-response',
+          status: 'No user(s) exist with that join code. Invalid join code.',
+          success: false
+        });
+      }
     });
-    this.startConversationForPair();
   }
 }
 

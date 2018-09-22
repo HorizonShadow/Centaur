@@ -58,7 +58,7 @@ class UserHandler {
     const payload = {
       id: this.id,
       type: 'event user-leave',
-      status: 'An user left.',
+      status: 'A user left.',
       code,
       data: {
         username, details

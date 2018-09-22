@@ -13,20 +13,6 @@ class User {
     this.alertUnRegisterSubscribers();
   }
 
-  alertUnRegisterSubscribers() {
-    Object.values(this.subscriptions).forEach(subscription => {
-      if(typeof subscription === 'undefined' || typeof subscription.conf === 'undefined') return;
-
-      if(subscription.conf.subscriptions.includes(SubscriptionEnum.user_leave)) {
-        subscription.subscriptionProviders.forEach(provider => {
-          if(provider.getSubscriptionId() === SubscriptionEnum.user_leave && provider.running) {
-            provider.onUserLeave(this.initMessage.username, this.initMessage.id, this.initMessage.details);
-          }
-        });
-      }
-    });
-  }
-
   getSerializeableObject() {
     return {
       details: this.details,

@@ -4,12 +4,14 @@ const Sender = require('./MessageHandlers/Sender');
 const UserRegistrar = require('./Users/UserRegistrar');
 const PairRequestHandler = require('./Users/PairRequestHandler');
 const User = require('../Models/User');
+const SubscriptionEnum = new (require('./Publishers/SubscriptionsEnum'))();
+
 class Dispatcher {
   constructor() {
     this.dispatchedClientPublishers = {
       subscriptions: {}
     };
-    this.onlineUsers = [];
+    this.connections = [];
   }
 
   addOnCloseUnsubscribe(ws, message) {
@@ -33,25 +35,34 @@ class Dispatcher {
     });
   }
 
-  addDeRegisterOnClose(ws, username) {
-    ws.addEventListener('close', () => {
-      const removedUsers = {};
-
-      for( let id in this.onlineUsers ) {
-        if(this.onlineUsers.hasOwnProperty(id) && this.onlineUsers[id].username !== username) {
-          removedUsers[id] = this.onlineUsers[id];
-        } else {
-          this.onlineUsers[id].unregister();
-        }
-      }
-
-      this.onlineUsers = removedUsers;
-    });
-  }
-
   handlePairRequest(websocket, message) {
     const pairRequestHandler = new PairRequestHandler(websocket, message, this.onlineUsers);
     pairRequestHandler.run(this.dispatchedClientPublishers.subscriptions);
+  }
+
+  removeConnection(ws) {
+    const connection = this.connections.find(c => c.ws === ws);
+    this.alertUnRegisterSubscribers(connection.user);
+    this.connections = this.connections.filter(s => s.ws !== ws);
+  }
+
+  alertUnRegisterSubscribers(id) {
+    Object.values(this.dispatchedClientPublishers.subscriptions).forEach(subscription => {
+      if(typeof subscription === 'undefined' || typeof subscription.conf === 'undefined') return;
+
+      if(subscription.conf.subscriptions.includes(SubscriptionEnum.user_leave)) {
+        subscription.subscriptionProviders.forEach(provider => {
+          if(provider.getSubscriptionId() === SubscriptionEnum.user_leave && provider.running) {
+            User.findById(id).then(user => {
+              if(user) {
+                provider.onUserLeave(user.username, user.id, user.details())
+                user.destroy();
+              }
+            })
+          }
+        });
+      }
+    });
   }
 
   start(ws, message) {
@@ -72,11 +83,20 @@ class Dispatcher {
         break;
       case 'register':
         User.create({
-          id: message.id
+          id: message.id,
+          username: message.username,
+          about: message.details.userAbout
         });
-        this.onlineUsers[message.id] = (new UserRegistrar(ws, message, this.dispatchedClientPublishers.subscriptions)).register();
-        // Remove user if they close their connection
-        this.addDeRegisterOnClose(ws, message.username);
+        this.connections.push({
+          ws: ws,
+          user: message.id
+        })
+        ws.send(JSON.stringify({
+          type: 'registered',
+          id: message.id,
+          status: `Successfully registered user ${message.username}`
+        }, null, 2));
+        //this.addDeRegisterOnClose(ws, message.username);
         break;
       case 'pair-request':
         this.handlePairRequest(ws, message);
